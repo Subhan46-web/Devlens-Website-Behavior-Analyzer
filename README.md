@@ -69,6 +69,21 @@ This means the project is focused on front-end interaction, rendering, layout, a
 
 ## Main Concepts Used
 
+- **DOM Manipulation** – Selecting, traversing, and dynamically updating elements  
+- **DOM Parsing** – Using `DOMParser` to analyze external HTML structure  
+- **Event Handling** – Managing user interactions (clicks, inputs, UI controls)  
+- **Asynchronous JavaScript** – Handling async operations with `fetch` and Promises  
+- **ES6+ Features** – Arrow functions, destructuring, modules, template literals  
+- **Responsive Design** – Building layouts with Flexbox and CSS Grid  
+- **Component-Based Structure (Vanilla JS)** – Organizing code into reusable modules  
+- **Data Visualization** – Displaying insights using charts (e.g., Chart.js)  
+- **Conditional Rendering** – Dynamically showing insights, warnings, and states  
+- **State Management (Basic)** – Managing app state without frameworks  
+- **Accessibility Analysis** – Detecting issues like missing `alt` attributes  
+- **Performance Heuristics** – Estimating load and optimization opportunities  
+- **UI/UX Design Principles** – Clean layout, hierarchy, and interactive feedback  
+- **Local Storage (Optional)** – Saving previous analyses  
+
 ### 1. Separation of concerns
 
 - `index.html` contains the structure
@@ -132,4 +147,5 @@ Or, if you prefer using a local server:
 Created by Subhan.
 
 GitHub: https://github.com/Subhan46-web
+
 LinkedIn: linkedin.com/in/subhanraza
