@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevLens - Website Behavior Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <svg width="0" height="0" aria-hidden="true" class="icon-sprite">
+    <symbol id="icon-globe" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm6.9 9h-3.07a15.9 15.9 0 0 0-1.45-5A8.03 8.03 0 0 1 18.9 11ZM12 4.05c.98 1.17 1.85 3.07 2.2 5.95H9.8c.35-2.88 1.22-4.78 2.2-5.95ZM9.62 6a15.9 15.9 0 0 0-1.45 5H5.1A8.03 8.03 0 0 1 9.62 6ZM5.1 13h3.07a15.9 15.9 0 0 0 1.45 5A8.03 8.03 0 0 1 5.1 13ZM12 19.95c-.98-1.17-1.85-3.07-2.2-5.95h4.4c-.35 2.88-1.22 4.78-2.2 5.95ZM14.38 18a15.9 15.9 0 0 0 1.45-5h3.07A8.03 8.03 0 0 1 14.38 18Z"/></symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/><path d="M19 3v4M21 5h-4M5 16v3M6.5 17.5h-3"/></symbol>
+    <symbol id="icon-layout" viewBox="0 0 24 24"><path d="M3 4h18v5H3zM3 11h8v9H3zM13 11h8v9h-8z"/></symbol>
+    <symbol id="icon-code" viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 4l-4 16"/></symbol>
+    <symbol id="icon-gauge" viewBox="0 0 24 24"><path d="M12 5a9 9 0 0 1 9 9h-3a6 6 0 1 0-12 0H3a9 9 0 0 1 9-9Z"/><path d="m12 12 4-4"/></symbol>
+    <symbol id="icon-accessibility" viewBox="0 0 24 24"><path d="M12 5.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM6 8h12M12 8v13M8.5 21 12 14l3.5 7M8 12l4-2 4 2"/></symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24"><path d="M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14ZM20 20l-4.35-4.35"/></symbol>
+    <symbol id="icon-alert" viewBox="0 0 24 24"><path d="M12 4 3 20h18L12 4Zm0 5v4M12 17h.01"/></symbol>
+    <symbol id="icon-image" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 16l4-4 3 3 5-6 4 5M9 10h.01"/></symbol>
+    <symbol id="icon-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 1 0-7l1.5-1.5a5 5 0 0 1 7 7L17 13M14 11a5 5 0 0 1 0 7L12.5 19.5a5 5 0 0 1-7-7L7 11"/></symbol>
+    <symbol id="icon-layers" viewBox="0 0 24 24"><path d="m12 4 8 4-8 4-8-4 8-4ZM4 12l8 4 8-4M4 16l8 4 8-4"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-command" viewBox="0 0 24 24"><path d="M6 6a2 2 0 1 1 4 0v4H6a2 2 0 1 1 0-4Zm0 8h4v4a2 2 0 1 1-4 0 2 2 0 1 1 0-4Zm8 0h4a2 2 0 1 1 0 4 2 2 0 1 1-4 0Zm0-8V2h4a2 2 0 1 1 0 4 2 2 0 1 1-4 0Z"/></symbol>
+    <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M5 20h14"/></symbol>
+  </svg>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <div class="brand-mark">
+          <svg class="ui-icon"><use href="#icon-search"></use></svg>
+        </div>
+        <div class="brand-copy">
+          <div class="brand-name">DevLens</div>
+          <div class="version-chip">V2.1</div>
+        </div>
+      </div>
+
+      <div class="url-form" id="urlForm">
+        <span class="url-prefix"><svg class="ui-icon"><use href="#icon-globe"></use></svg>https://</span>
+        <input id="urlInput" class="url-input" type="text" placeholder="e.g. github.com, stripe.com" autocomplete="off">
+      </div>
+
+      <button id="analyzeBtn" class="primary-button" type="button"><svg class="ui-icon"><use href="#icon-spark"></use></svg>Analyze</button>
+
+      <div class="topbar-actions">
+        <button id="cmdBtn" class="icon-button" type="button" aria-label="Command palette"><svg class="ui-icon"><use href="#icon-command"></use></svg></button>
+        <button id="themeBtn" class="icon-button" type="button" aria-label="Toggle theme"><svg class="ui-icon"><use href="#icon-moon"></use></svg></button>
+        <button id="exportJsonBtn" class="icon-button" type="button" aria-label="Export JSON"><svg class="ui-icon"><use href="#icon-download"></use></svg></button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="sidebar-block">
+        <div class="sidebar-label">Analysis</div>
+        <button class="nav-link active" data-section="overview"><span class="nav-link-main"><svg class="ui-icon"><use href="#icon-layout"></use></svg>Overview</span><span class="nav-link-index">1</span></button>
+        <button class="nav-link" data-section="dom"><span class="nav-link-main"><svg class="ui-icon"><use href="#icon-code"></use></svg>DOM Inspector</span><span class="nav-link-index">2</span></button>
+        <button class="nav-link" data-section="performance"><span class="nav-link-main"><svg class="ui-icon"><use href="#icon-spark"></use></svg>Performance</span><span class="nav-link-index">3</span></button>
+        <button class="nav-link" data-section="accessibility"><span class="nav-link-main"><svg class="ui-icon"><use href="#icon-accessibility"></use></svg>Accessibility</span><span class="nav-link-index">4</span></button>
+        <button class="nav-link" data-section="seo"><span class="nav-link-main"><svg class="ui-icon"><use href="#icon-search"></use></svg>SEO</span><span class="nav-link-index">5</span></button>
+        <button class="nav-link" data-section="issues"><span class="nav-link-main"><svg class="ui-icon"><use href="#icon-alert"></use></svg>Issues</span><span class="nav-link-index">6</span></button>
+      </div>
+
+      <div class="sidebar-block">
+        <div class="sidebar-label">Actions</div>
+        <button id="exportHtmlBtn" class="plain-action" type="button"><svg class="ui-icon"><use href="#icon-download"></use></svg>Export Report</button>
+        <button id="sidebarCmdBtn" class="plain-action" type="button"><svg class="ui-icon"><use href="#icon-command"></use></svg>Command Palette <span class="shortcut-chip">Ctrl+K</span></button>
+      </div>
+
+      <div class="sidebar-block">
+        <div class="sidebar-label">Recent</div>
+        <div id="recentList" class="recent-list">
+          <div class="empty-copy mono-copy">No history yet</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section id="welcomeState" class="landing-stage">
+        <div class="landing-hero">
+          <h1>Analyze any website instantly</h1>
+          <p>// Enter a URL above and press Analyze</p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card feature-card-active">
+            <div class="feature-icon"><svg class="ui-icon"><use href="#icon-code"></use></svg></div>
+            <h3>DOM Structure</h3>
+            <p>Inspect element hierarchy and attributes</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon"><svg class="ui-icon"><use href="#icon-accessibility"></use></svg></div>
+            <h3>Accessibility</h3>
+            <p>Find WCAG violations and missing attributes</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon"><svg class="ui-icon"><use href="#icon-spark"></use></svg></div>
+            <h3>Performance</h3>
+            <p>Measure resource weight and load indicators</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon"><svg class="ui-icon"><use href="#icon-search"></use></svg></div>
+            <h3>SEO Insights</h3>
+            <p>Meta tags, headings, and content signals</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon"><svg class="ui-icon"><use href="#icon-alert"></use></svg></div>
+            <h3>Smart Issues</h3>
+            <p>Prioritized suggestions by severity</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon"><svg class="ui-icon"><use href="#icon-download"></use></svg></div>
+            <h3>Reports</h3>
+            <p>Export JSON or HTML audit reports</p>
+          </article>
+        </div>
+
+        <div class="landing-hint mono-copy">Press <span class="shortcut-chip">Ctrl+K</span> to open command palette · <span class="shortcut-chip">Ctrl+Enter</span> to analyze</div>
+      </section>
+
+      <section id="resultsState" class="results-stage hidden">
+        <section id="section-overview" class="section-panel results-panel">
+          <div class="results-heading">
+            <div>
+              <div class="eyebrow">Current Site</div>
+              <h2 id="siteTitle">No analysis yet</h2>
+              <p id="siteUrl" class="muted">Run an analysis to populate results.</p>
+            </div>
+            <div id="overallGrade" class="grade-chip grade-neutral">--</div>
+          </div>
+
+          <div class="summary-band">
+            <span id="analysisDuration" class="summary-pill">Waiting for analysis</span>
+            <span id="issueCountSummary" class="summary-pill">0 issues</span>
+            <span id="qualitySignal" class="summary-pill">Waiting for scan</span>
+          </div>
+
+          <div id="statsGrid" class="stats-grid"></div>
+          <div id="scoresGrid" class="score-grid"></div>
+
+          <div class="dual-grid">
+            <article class="panel chart-panel">
+              <div class="panel-title">Resource Mix</div>
+              <canvas id="resourceChart"></canvas>
+            </article>
+            <article class="panel chart-panel">
+              <div class="panel-title">Issue Severity</div>
+              <canvas id="severityChart"></canvas>
+            </article>
+          </div>
+
+          <div class="dual-grid">
+            <article class="panel">
+              <div class="panel-title">Top Recommendations</div>
+              <div id="recommendationsList" class="stack-list"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">Meta Signals</div>
+              <div id="signalList" class="stack-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="section-dom" class="section-panel results-panel hidden">
+          <div class="results-heading">
+            <div>
+              <div class="eyebrow">DOM Inspector</div>
+              <h2>Structure Preview</h2>
+            </div>
+            <div id="domNodeCount" class="summary-pill">0 nodes</div>
+          </div>
+          <article class="panel">
+            <div id="domTree" class="dom-tree"></div>
+          </article>
+          <div class="dual-grid">
+            <article class="panel">
+              <div class="panel-title">Script Inventory</div>
+              <div id="scriptList" class="stack-list"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">Link Diagnostics</div>
+              <div id="domLinkSummary" class="stack-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="section-performance" class="section-panel results-panel hidden">
+          <div class="results-heading">
+            <div>
+              <div class="eyebrow">Performance</div>
+              <h2>Core Metrics</h2>
+            </div>
+          </div>
+          <div id="performanceGrid" class="metric-grid"></div>
+          <article class="panel">
+            <div class="panel-title">Performance Opportunities</div>
+            <div id="performanceTips" class="stack-list"></div>
+          </article>
+        </section>
+
+        <section id="section-accessibility" class="section-panel results-panel hidden">
+          <div class="results-heading">
+            <div>
+              <div class="eyebrow">Accessibility</div>
+              <h2>Heading and Image Review</h2>
+            </div>
+          </div>
+          <div class="dual-grid">
+            <article class="panel">
+              <div class="panel-title">Heading Outline</div>
+              <div id="headingList" class="stack-list"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">Image Audit</div>
+              <div id="imageList" class="stack-list"></div>
+            </article>
+          </div>
+          <article class="panel">
+            <div class="panel-title">Accessibility Summary</div>
+            <div id="a11ySummary" class="stack-list"></div>
+          </article>
+        </section>
+
+        <section id="section-seo" class="section-panel results-panel hidden">
+          <div class="results-heading">
+            <div>
+              <div class="eyebrow">SEO</div>
+              <h2>Metadata Coverage</h2>
+            </div>
+          </div>
+          <div class="dual-grid">
+            <article class="panel">
+              <div class="panel-title">Meta Tags</div>
+              <div id="metaList" class="stack-list"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-title">Top Links</div>
+              <div id="linkList" class="stack-list"></div>
+            </article>
+          </div>
+          <article class="panel">
+            <div class="panel-title">Search Preview Checklist</div>
+            <div id="seoChecklist" class="stack-list"></div>
+          </article>
+        </section>
+
+        <section id="section-issues" class="section-panel results-panel hidden">
+          <div class="results-heading">
+            <div>
+              <div class="eyebrow">Issues</div>
+              <h2>Audit Findings</h2>
+            </div>
+            <div class="filter-row">
+              <button class="filter-chip active" data-filter="all" type="button">All</button>
+              <button class="filter-chip" data-filter="critical" type="button">Critical</button>
+              <button class="filter-chip" data-filter="warning" type="button">Warning</button>
+              <button class="filter-chip" data-filter="info" type="button">Info</button>
+            </div>
+          </div>
+          <div class="dual-grid issues-layout">
+            <article class="panel">
+              <div id="issuesList" class="issues-list"></div>
+            </article>
+            <article class="panel details-panel">
+              <div class="panel-title">Issue Details</div>
+              <div id="inspectorBody" class="inspector-body">
+                <div class="empty-copy">Analyze a site, then select an issue to inspect its details here.</div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <footer class="statusbar">
+    <div class="status-left">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Ready</span>
+      <span class="status-divider">|</span>
+      <span id="statusUrl">No analysis</span>
+      <span class="status-divider">|</span>
+      <span id="statusTime">--:--:--</span>
+    </div>
+    <div class="status-right mono-copy">DevLens v2.1 · Ctrl+K for commands</div>
+  </footer>
+
+  <div id="toast" class="toast">
+    <div id="toastTitle" class="toast-title">Status</div>
+    <div id="toastMessage" class="toast-message"></div>
+  </div>
+
+  <script src="assets/js/script.js"></script>
+</body>
+</html>
