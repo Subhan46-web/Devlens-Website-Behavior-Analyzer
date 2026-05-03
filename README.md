@@ -1,46 +1,60 @@
 # DevLens Website Behavior Analyzer
 
-DevLens is a front-end website audit dashboard that simulates the kind of analysis a modern web inspector might provide. It lets a user enter a URL and then view mock results for structure, performance, accessibility, SEO, and issue severity in a polished interactive UI.
+DevLens is a front-end website audit dashboard powered by the Google PageSpeed Insights API. It lets a user enter a URL and view Lighthouse-based results for performance, accessibility, SEO, best practices, and issue severity in a polished interactive UI.
 
-This project is designed as a portfolio-friendly static web app. It is especially useful for learning how HTML, CSS, and JavaScript work together in a dashboard-style interface.
-
+This project is designed as a portfolio-friendly static web app. It is especially useful for learning how HTML, CSS, JavaScript, API calls, and dashboard rendering work together.
 
 ## Preview
 
-![DEVLENS WEBSITE BEHAVIOR ANALYZER Screenshot](assets/images/Screenshots/SS-1.png)
-![DEVLENS WEBSITE BEHAVIOR ANALYZER Screenshot](assets/images/Screenshots/SS-2.png)
-![DEVLENS WEBSITE BEHAVIOR ANALYZER Screenshot](assets/images/Screenshots/SS-3.png)
-![DEVLENS WEBSITE BEHAVIOR ANALYZER Screenshot](assets/images/Screenshots/SS-4.png)
-![DEVLENS WEBSITE BEHAVIOR ANALYZER Screenshot](assets/images/Screenshots/SS-5.png)
-![DEVLENS WEBSITE BEHAVIOR ANALYZER Screenshot](assets/images/Screenshots/SS-6.png)
-![DEVLENS WEBSITE BEHAVIOR ANALYZER Screenshot](assets/images/Screenshots/SS-7.png)
-![DEVLENS WEBSITE BEHAVIOR ANALYZER Screenshot](assets/images/Screenshots/SS-8.png)
-![DEVLENS WEBSITE BEHAVIOR ANALYZER Screenshot](assets/images/Screenshots/SS-9.png)
+  ### DEsktop Preview
+![DevLens Screenshot](./assets/images/Screenshots/Desktopview1.png)
+![DevLens Screenshot](./assets/images/Screenshots/Desktopview2.png)
+![DevLens Screenshot](./assets/images/Screenshots/Desktopview3.png)
+![DevLens Screenshot](./assets/images/Screenshots/Desktopview4.png)
+![DevLens Screenshot](./assets/images/Screenshots/Desktopview5.png)
+![DevLens Screenshot](./assets/images/Screenshots/Desktopview6.png)
+![DevLens Screenshot](./assets/images/Screenshots/Desktopview7.png)
+
+
+  ### Tablet Preview
+
+![DevLens Screenshot](./assets/images/Screenshots/Tabletview1.png)
+![DevLens Screenshot](./assets/images/Screenshots/Tabletview2.png)
+![DevLens Screenshot](./assets/images/Screenshots/Tabletview3.png)
+![DevLens Screenshot](./assets/images/Screenshots/Tabletview4.png)
+![DevLens Screenshot](./assets/images/Screenshots/Tabletview5.png)
+
+  ### Mobile View
+
+![DevLens Screenshot](./assets/images/Screenshots/Mobileview1.png)
+![DevLens Screenshot](./assets/images/Screenshots/Mobileview2.png)
+![DevLens Screenshot](./assets/images/Screenshots/Mobileview3.png)
+![DevLens Screenshot](./assets/images/Screenshots/Mobileview4.png)
+![DevLens Screenshot](./assets/images/Screenshots/Mobileview5.png)
+![DevLens Screenshot](./assets/images/Screenshots/Mobileview6.png)
+![DevLens Screenshot](./assets/images/Screenshots/Mobileview7.png)
 
 
 ## Features
 
-- Analyze a website URL with a single input and action button
-- View six main sections:
-  - Overview
-  - DOM Inspector
-  - Performance
-  - Accessibility
-  - SEO
-  - Issues
-- Explore score cards, charts, issue summaries, and detail panels
-- Export mock audit data as JSON or HTML
+- Analyze a website URL with Google PageSpeed Insights
+- View six main sections: Overview, DOM Inspector, Performance, Accessibility, SEO, and Issues
+- Explore Lighthouse score cards, charts, issue summaries, and detail panels
+- Export audit data as JSON or HTML
 - Switch between dark and light theme
 - Use a responsive layout for desktop, tablet, and mobile screens
 
 ## Project Structure
 
-```
+```text
 DevLens Website Behavior Analyzer/
 |-- assets/
 |   |-- css/
 |   |   `-- style.css
+|   |-- images/
+|   |   `-- Screenshots/
 |   `-- js/
+|       |-- config.example.js
 |       `-- script.js
 |-- index.html
 `-- README.md
@@ -51,99 +65,85 @@ DevLens Website Behavior Analyzer/
 - HTML5
 - CSS3
 - JavaScript (Vanilla JS)
-- [Chart.js](https://www.chartjs.org/) for charts
-- Google Fonts for typography
+- Chart.js
+- Google PageSpeed Insights API
+- Google Fonts
 
 ## How It Works
 
-The app currently uses mock data instead of running a real live crawl of a website.
+The app calls the Google PageSpeed Insights API directly from the browser. PageSpeed runs Lighthouse against the submitted URL and returns category scores, lab metrics, resource summaries, and audit recommendations.
 
 When a user enters a URL and presses Analyze:
 
 1. JavaScript normalizes the URL input.
-2. A mock analysis object is generated.
-3. The app stores that data in memory.
-4. The dashboard updates the visible section cards, charts, metrics, and issue lists.
+2. The app requests a mobile Lighthouse analysis from PageSpeed Insights.
+3. The API response is transformed into the dashboard data model.
+4. The app stores that data in memory.
+5. The dashboard updates the visible cards, charts, metrics, and issue lists.
 
-This means the project is focused on front-end interaction, rendering, layout, and user experience rather than backend crawling or real network analysis.
+Some deep DOM details, such as a complete list of every link or form on the page, are not exposed by PageSpeed Insights. DevLens shows real API-backed data where it is available and labels unavailable areas honestly.
 
 ## Main Concepts Used
 
-- **DOM Manipulation** – Selecting, traversing, and dynamically updating elements  
-- **DOM Parsing** – Using `DOMParser` to analyze external HTML structure  
-- **Event Handling** – Managing user interactions (clicks, inputs, UI controls)  
-- **Asynchronous JavaScript** – Handling async operations with `fetch` and Promises  
-- **ES6+ Features** – Arrow functions, destructuring, modules, template literals  
-- **Responsive Design** – Building layouts with Flexbox and CSS Grid  
-- **Component-Based Structure (Vanilla JS)** – Organizing code into reusable modules  
-- **Data Visualization** – Displaying insights using charts (e.g., Chart.js)  
-- **Conditional Rendering** – Dynamically showing insights, warnings, and states  
-- **State Management (Basic)** – Managing app state without frameworks  
-- **Accessibility Analysis** – Detecting issues like missing `alt` attributes  
-- **Performance Heuristics** – Estimating load and optimization opportunities  
-- **UI/UX Design Principles** – Clean layout, hierarchy, and interactive feedback  
-- **Local Storage (Optional)** – Saving previous analyses  
-
-### 1. Separation of concerns
-
-- `index.html` contains the structure
-- `assets/css/style.css` contains the design and responsive rules
-- `assets/js/script.js` contains the app behavior
-
-### 2. State management
-
-The app keeps track of current data, active section, selected filter, theme, and recent analyses inside a shared JavaScript `state` object.
-
-### 3. DOM manipulation
-
-JavaScript updates the page by targeting elements with IDs and classes, then changing text, visibility, and generated HTML blocks.
-
-### 4. Responsive design
-
-CSS media queries adapt the layout for:
-
-- Desktop
-- Tablet
-- Mobile
-
-The app uses grid and flexbox so the interface can rearrange cleanly on smaller screens.
-
-### 5. Component-style rendering
-
-Even without a framework like React, the app uses reusable rendering functions to generate UI blocks such as:
-
-- score cards
-- issue cards
-- stack items
-- metric panels
+- **API Integration** - Calling PageSpeed Insights and transforming Lighthouse JSON
+- **DOM Manipulation** - Selecting, traversing, and dynamically updating elements
+- **Event Handling** - Managing user interactions such as clicks, inputs, and UI controls
+- **Asynchronous JavaScript** - Handling async operations with `fetch` and Promises
+- **Responsive Design** - Building layouts with Flexbox and CSS Grid
+- **Component-Style Rendering** - Organizing vanilla JavaScript into reusable render functions
+- **Data Visualization** - Displaying insights using Chart.js
+- **Conditional Rendering** - Dynamically showing insights, warnings, and states
+- **State Management** - Managing app state without a JavaScript framework
+- **Accessibility Analysis** - Reading Lighthouse accessibility audits
+- **Performance Metrics** - Displaying real Lighthouse lab metrics
 
 ## Running the Project
 
-Because this is a static project, you can run it very simply:
+Because this is a static project, you can run it by opening `index.html` in a browser.
 
-1. Open `index.html` in a browser
+For a smoother local workflow:
 
-Or, if you prefer using a local server:
+1. Open the project folder in VS Code.
+2. Use a Live Server extension or any simple static server.
+3. Launch the page in your browser.
 
-1. Open the project folder in VS Code
-2. Use a simple live server extension
-3. Launch the page in your browser
+## API Notes
 
-## Responsive Behavior
+DevLens uses this endpoint:
 
-- Desktop keeps the analysis rail and main content side by side
-- Tablet stacks the content and sidebar cleanly
-- Mobile uses a single-column layout with wrapped top-bar controls
+```text
+https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed
+```
+
+The current version requests mobile Lighthouse data for these categories:
+
+- Performance
+- Accessibility
+- Best Practices
+- SEO
+
+For larger usage, a backend proxy and API key are recommended so API quota and keys can be managed safely.
+
+If the public quota is exhausted, DevLens will ask for a Google PageSpeed Insights API key. The key is stored in the current browser using `localStorage` and is not written into the project files.
+
+For local development, you can also create this ignored file:
+
+```text
+assets/js/config.local.js
+```
+
+Use `assets/js/config.example.js` as the template and place your own PageSpeed API key there. Do not commit `config.local.js` to GitHub.
 
 ## Future Improvements
 
-- Connect the app to a real website analysis API
+- Add a backend proxy for higher API quota and private API keys
 - Add a true command palette modal
 - Save report history in local storage
-- Add screenshots or branded assets
+- Add desktop and mobile strategy switching
 - Support GitHub Pages deployment
 
 ## Author
+
 Created by Subhan.
 
 GitHub: https://github.com/Subhan46-web

@@ -25,12 +25,17 @@
     <symbol id="icon-layers" viewBox="0 0 24 24"><path d="m12 4 8 4-8 4-8-4 8-4ZM4 12l8 4 8-4M4 16l8 4 8-4"/></symbol>
     <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
     <symbol id="icon-command" viewBox="0 0 24 24"><path d="M6 6a2 2 0 1 1 4 0v4H6a2 2 0 1 1 0-4Zm0 8h4v4a2 2 0 1 1-4 0 2 2 0 1 1 0-4Zm8 0h4a2 2 0 1 1 0 4 2 2 0 1 1-4 0Zm0-8V2h4a2 2 0 1 1 0 4 2 2 0 1 1-4 0Z"/></symbol>
+    <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
     <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></symbol>
     <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M5 20h14"/></symbol>
   </svg>
 
   <div class="app-shell">
     <header class="topbar">
+      <button id="sidebarToggleBtn" class="icon-button sidebar-toggle" type="button" aria-label="Open analysis navigation" aria-expanded="false">
+        <svg class="ui-icon"><use href="#icon-menu"></use></svg>
+      </button>
+
       <div class="brand-block">
         <div class="brand-mark">
           <svg class="ui-icon"><use href="#icon-search"></use></svg>
@@ -55,7 +60,9 @@
       </div>
     </header>
 
-    <aside class="sidebar">
+    <div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
+
+    <aside id="analysisSidebar" class="sidebar" aria-label="Analysis navigation">
       <div class="sidebar-block">
         <div class="sidebar-label">Analysis</div>
         <button class="nav-link active" data-section="overview"><span class="nav-link-main"><svg class="ui-icon"><use href="#icon-layout"></use></svg>Overview</span><span class="nav-link-index">1</span></button>
@@ -154,7 +161,7 @@
             </article>
           </div>
 
-          <div class="dual-grid">
+          <div class="dual-grid overview-insights-grid">
             <article class="panel">
               <div class="panel-title">Top Recommendations</div>
               <div id="recommendationsList" class="stack-list"></div>
@@ -295,6 +302,26 @@
     <div id="toastMessage" class="toast-message"></div>
   </div>
 
+  <div id="commandPalette" class="command-palette" hidden>
+    <div class="command-dialog" role="dialog" aria-modal="true" aria-labelledby="commandTitle">
+      <div class="command-header">
+        <div>
+          <div class="sidebar-label">Command Palette</div>
+          <h2 id="commandTitle">Quick actions</h2>
+        </div>
+        <button id="closeCommandBtn" class="icon-button" type="button" aria-label="Close command palette">
+          <svg class="ui-icon"><use href="#icon-alert"></use></svg>
+        </button>
+      </div>
+      <div class="command-search">
+        <svg class="ui-icon"><use href="#icon-search"></use></svg>
+        <input id="commandInput" type="text" placeholder="Search commands..." autocomplete="off">
+      </div>
+      <div id="commandList" class="command-list"></div>
+    </div>
+  </div>
+
+  <script src="assets/js/config.local.js"></script>
   <script src="assets/js/script.js"></script>
 </body>
 </html>

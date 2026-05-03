@@ -1,3 +1,4 @@
+
 const state = {
   analysis: null,
   section: "overview",
@@ -10,6 +11,12 @@ const state = {
 };
 
 const elements = {
+  sidebarToggleBtn: document.getElementById("sidebarToggleBtn"),
+  sidebarBackdrop: document.getElementById("sidebarBackdrop"),
+  commandPalette: document.getElementById("commandPalette"),
+  commandInput: document.getElementById("commandInput"),
+  commandList: document.getElementById("commandList"),
+  closeCommandBtn: document.getElementById("closeCommandBtn"),
   urlInput: document.getElementById("urlInput"),
   analyzeBtn: document.getElementById("analyzeBtn"),
   cmdBtn: document.getElementById("cmdBtn"),
@@ -55,9 +62,8 @@ const elements = {
   severityChartCanvas: document.getElementById("severityChart")
 };
 
-function randomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+const PAGE_SPEED_API_KEY_STORAGE = "devlensPageSpeedApiKey";
+let commandSelection = 0;
 
 function normalizeUrl(value) {
   const trimmed = value.trim();
@@ -65,153 +71,274 @@ function normalizeUrl(value) {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-function createAnalysis(url) {
-  const domain = new URL(url).hostname.replace(/^www\./, "");
-  const issueTemplates = [
-    {
-      severity: "critical",
-      title: "Images missing alt attributes",
-      description: () => `${randomInt(3, 10)} image elements are missing helpful alt text.`,
-      category: "Accessibility",
-      recommendation: "Add descriptive alt text for meaningful media and empty alt values for decorative images."
-    },
-    {
-      severity: "critical",
-      title: "Missing meta description",
-      description: () => "The page is missing a meta description for search result previews.",
-      category: "SEO",
-      recommendation: "Add a concise meta description around 150-160 characters."
-    },
-    {
-      severity: "warning",
-      title: "Render-blocking JavaScript",
-      description: () => `${randomInt(2, 6)} scripts are loading before the page can paint.`,
-      category: "Performance",
-      recommendation: "Use defer or async on non-critical scripts and move non-essential work later."
-    },
-    {
-      severity: "warning",
-      title: "Heading hierarchy skips levels",
-      description: () => "The content outline jumps from H2 to H4 in at least one section.",
-      category: "Accessibility",
-      recommendation: "Keep heading levels in order so assistive tech can follow the content structure."
-    },
-    {
-      severity: "info",
-      title: "Canonical tag missing",
-      description: () => "No canonical URL was detected for the page.",
-      category: "SEO",
-      recommendation: "Add a canonical link element to reduce duplicate-content ambiguity."
-    },
-    {
-      severity: "info",
-      title: "Third-party domains could use preconnect",
-      description: () => `${randomInt(2, 5)} external origins are loaded without preconnect hints.`,
-      category: "Performance",
-      recommendation: "Add preconnect for the most expensive third-party origins."
-    }
-  ];
+async function fetchPageSpeedAnalysis(url) {
+  const endpoint = new URL("https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed");
+  endpoint.searchParams.set("url", url);
+  endpoint.searchParams.set("strategy", "mobile");
+  endpoint.searchParams.set("locale", "en");
+  const apiKey = getStoredPageSpeedApiKey();
+  if (apiKey) endpoint.searchParams.set("key", apiKey);
+  ["PERFORMANCE", "ACCESSIBILITY", "BEST_PRACTICES", "SEO"].forEach((category) => {
+    endpoint.searchParams.append("category", category);
+  });
 
-  const issues = issueTemplates.map((template, index) => ({
-    id: `${template.severity}-${index}`,
-    severity: template.severity,
-    title: template.title,
-    description: template.description(),
-    category: template.category,
-    count: template.severity === "info" ? 1 : randomInt(1, 8),
-    recommendation: template.recommendation
-  }));
+  const response = await fetch(endpoint.toString());
+  const data = await response.json();
 
-  const scores = {
-    performance: randomInt(55, 94),
-    accessibility: randomInt(60, 96),
-    seo: randomInt(58, 97),
-    bestPractices: randomInt(63, 95)
-  };
+  if (!response.ok) {
+    const message = data?.error?.message || "PageSpeed Insights could not analyze this URL.";
+    throw new Error(message);
+  }
 
-  const images = Array.from({ length: randomInt(7, 18) }, (_, index) => ({
-    src: `/assets/image-${index + 1}.jpg`,
-    alt: index % 3 === 0 ? "" : `Image description ${index + 1}`,
-    sizeKb: randomInt(40, 420),
-    lazy: index % 2 === 0
-  }));
+  if (data?.lighthouseResult?.runtimeError) {
+    throw new Error(data.lighthouseResult.runtimeError.message);
+  }
 
-  const headings = [
-    { tag: "H1", text: `${domain} home`, valid: true },
-    { tag: "H2", text: "Features", valid: true },
-    { tag: "H3", text: "Core product", valid: true },
-    { tag: "H4", text: "Enterprise details", valid: false },
-    { tag: "H2", text: "Pricing", valid: true }
-  ];
+  return transformPageSpeedResult(url, data);
+}
 
-  const links = [
-    { text: "Home", href: "/", external: false },
-    { text: "Pricing", href: "/pricing", external: false },
-    { text: "Docs", href: "/docs", external: false },
-    { text: "GitHub", href: `https://github.com/${domain}`, external: true }
-  ];
+function getStoredPageSpeedApiKey() {
+  const configKey = window.DEVLENS_CONFIG?.PAGESPEED_API_KEY?.trim() || "";
+  if (configKey) {
+    localStorage.setItem(PAGE_SPEED_API_KEY_STORAGE, configKey);
+    return configKey;
+  }
 
-  const scripts = Array.from({ length: randomInt(4, 9) }, (_, index) => ({
-    name: index % 3 === 0 ? "inline script" : `bundle-${index + 1}.js`,
-    type: index % 2 === 0 ? "module" : "classic",
-    blocking: index % 3 === 0,
-    sizeKb: randomInt(18, 240)
-  }));
+  return localStorage.getItem(PAGE_SPEED_API_KEY_STORAGE) || "";
+}
+
+function savePageSpeedApiKey(apiKey) {
+  localStorage.setItem(PAGE_SPEED_API_KEY_STORAGE, apiKey.trim());
+}
+
+function isQuotaError(error) {
+  return /quota|rate limit|limit/i.test(error.message);
+}
+
+function requestPageSpeedApiKey() {
+  const apiKey = window.prompt("PageSpeed quota was reached. Paste your Google PageSpeed Insights API key to run real audits from your own quota.");
+  if (!apiKey || !apiKey.trim()) return false;
+  savePageSpeedApiKey(apiKey);
+  showToast("API key saved", "The key is stored only in this browser using localStorage.");
+  return true;
+}
+
+function transformPageSpeedResult(requestedUrl, data) {
+  const lighthouse = data.lighthouseResult;
+  const audits = lighthouse.audits || {};
+  const categories = lighthouse.categories || {};
+  const finalUrl = lighthouse.finalDisplayedUrl || lighthouse.finalUrl || requestedUrl;
+  const domain = new URL(finalUrl).hostname.replace(/^www\./, "");
+  const resourceSummary = getResourceSummary(audits["resource-summary"]);
+  const networkRequests = getAuditItems(audits["network-requests"]);
+  const totalElements = Math.round(getNumericAuditValue(audits["dom-size"], 0));
+
+  const issues = buildIssuesFromLighthouse(categories, audits);
 
   return {
-    url,
+    url: finalUrl,
+    requestedUrl,
     domain,
-    title: `${domain} audit snapshot`,
-    analyzedAt: new Date().toISOString(),
-    duration: randomInt(900, 2600),
-    scores,
+    title: `${domain} Lighthouse audit`,
+    analyzedAt: lighthouse.fetchTime || new Date().toISOString(),
+    duration: Math.round(lighthouse.timing?.total || 0),
+    scores: {
+      performance: scoreToPercent(categories.performance?.score),
+      accessibility: scoreToPercent(categories.accessibility?.score),
+      seo: scoreToPercent(categories.seo?.score),
+      bestPractices: scoreToPercent(categories["best-practices"]?.score)
+    },
     stats: {
-      totalElements: randomInt(220, 860),
-      domDepth: randomInt(10, 24),
-      images: images.length,
-      scripts: randomInt(4, 12),
-      stylesheets: randomInt(2, 7),
-      links: links.length + randomInt(16, 50),
-      forms: randomInt(0, 4),
-      iframes: randomInt(0, 2)
+      totalElements,
+      domDepth: Math.round(getNumericAuditValue(audits["dom-size"], 0)),
+      images: resourceSummary.image?.count || 0,
+      scripts: resourceSummary.script?.count || 0,
+      stylesheets: resourceSummary.stylesheet?.count || 0,
+      links: 0,
+      forms: 0,
+      iframes: resourceSummary.other?.count || 0
     },
     performance: {
-      fcp: (randomInt(9, 24) / 10).toFixed(1),
-      lcp: (randomInt(20, 45) / 10).toFixed(1),
-      cls: (randomInt(1, 18) / 100).toFixed(2),
-      tbt: randomInt(120, 780),
-      ttfb: randomInt(90, 540),
-      requestCount: randomInt(18, 90),
-      resourceSizeKb: randomInt(500, 2800)
+      fcp: millisecondsToSeconds(getNumericAuditValue(audits["first-contentful-paint"], 0)),
+      lcp: millisecondsToSeconds(getNumericAuditValue(audits["largest-contentful-paint"], 0)),
+      cls: formatMetric(getNumericAuditValue(audits["cumulative-layout-shift"], 0), 2),
+      tbt: Math.round(getNumericAuditValue(audits["total-blocking-time"], 0)),
+      ttfb: Math.round(getNumericAuditValue(audits["server-response-time"], 0)),
+      requestCount: networkRequests.length,
+      resourceSizeKb: bytesToKb(getNumericAuditValue(audits["total-byte-weight"], 0))
     },
     issues,
-    headings,
-    images,
-    links,
-    scripts,
+    headings: buildHeadingData(audits["heading-order"]),
+    images: buildImageData(audits["image-alt"], resourceSummary.image?.count || 0),
+    links: [],
+    scripts: buildScriptData(networkRequests),
     meta: {
-      viewport: true,
+      viewport: auditPassed(audits.viewport),
       charset: true,
-      description: randomInt(0, 1) === 1,
-      canonical: false,
-      ogTitle: randomInt(0, 1) === 1,
-      ogImage: randomInt(0, 1) === 1,
-      robots: true,
-      lang: "en"
+      description: auditPassed(audits["meta-description"]),
+      canonical: auditPassed(audits.canonical),
+      ogTitle: auditPassed(audits["document-title"]),
+      ogImage: auditPassed(audits["crawlable-anchors"]),
+      robots: auditPassed(audits["robots-txt"]),
+      lang: auditPassed(audits["html-has-lang"]) ? "en" : null
     },
-    domNodes: [
-      "<html>",
-      "  <head>",
-      "    <meta charset=\"UTF-8\">",
-      "    <title>...</title>",
-      "  <body>",
-      "    <header class=\"site-header\">",
-      "    <main id=\"content\">",
-      "      <section class=\"hero\">",
-      "      <section class=\"features\">",
-      "    <footer class=\"site-footer\">"
-    ]
+    domNodes: buildDomSummary(lighthouse, audits),
+    source: "Google PageSpeed Insights API",
+    rawPageSpeedResult: data
   };
+}
+
+function scoreToPercent(score) {
+  return typeof score === "number" ? Math.round(score * 100) : 0;
+}
+
+function getNumericAuditValue(audit, fallback) {
+  return typeof audit?.numericValue === "number" ? audit.numericValue : fallback;
+}
+
+function auditPassed(audit) {
+  return audit?.score === 1;
+}
+
+function formatMetric(value, digits) {
+  return Number.isFinite(value) ? Number(value).toFixed(digits) : "0";
+}
+
+function millisecondsToSeconds(value) {
+  return formatMetric(value / 1000, 1);
+}
+
+function bytesToKb(value) {
+  return Math.round((value || 0) / 1024);
+}
+
+function getAuditItems(audit) {
+  return Array.isArray(audit?.details?.items) ? audit.details.items : [];
+}
+
+function getResourceSummary(audit) {
+  return getAuditItems(audit).reduce((summary, item) => {
+    const type = item.resourceType || "other";
+    summary[type] = {
+      count: Number(item.requestCount || 0),
+      transferSize: Number(item.transferSize || 0)
+    };
+    return summary;
+  }, {});
+}
+
+function buildIssuesFromLighthouse(categories, audits) {
+  const categoryLabels = {
+    performance: "Performance",
+    accessibility: "Accessibility",
+    seo: "SEO",
+    "best-practices": "Best Practices"
+  };
+
+  const issueMap = new Map();
+  Object.entries(categories).forEach(([categoryKey, category]) => {
+    (category.auditRefs || []).forEach((ref) => {
+      const audit = audits[ref.id];
+      if (!shouldShowAuditIssue(audit)) return;
+      issueMap.set(ref.id, {
+        id: ref.id,
+        severity: getSeverityFromAudit(audit),
+        title: audit.title || ref.id,
+        description: audit.description || audit.displayValue || "Review this Lighthouse audit.",
+        category: categoryLabels[categoryKey] || category.title || "Audit",
+        count: getAuditIssueCount(audit),
+        recommendation: audit.displayValue || audit.description || "Review the Lighthouse recommendation for this audit.",
+        score: audit.score
+      });
+    });
+  });
+
+  return Array.from(issueMap.values())
+    .sort((a, b) => severityWeight(a.severity) - severityWeight(b.severity))
+    .slice(0, 30);
+}
+
+function shouldShowAuditIssue(audit) {
+  if (!audit) return false;
+  if (audit.scoreDisplayMode === "notApplicable" || audit.scoreDisplayMode === "manual") return false;
+  if (audit.score === null || audit.score === undefined) return false;
+  return audit.score < 1;
+}
+
+function getSeverityFromAudit(audit) {
+  if (audit.score === 0) return "critical";
+  if (audit.score < 0.9) return "warning";
+  return "info";
+}
+
+function getAuditIssueCount(audit) {
+  const itemCount = getAuditItems(audit).length;
+  return itemCount || 1;
+}
+
+function buildHeadingData(audit) {
+  const items = getAuditItems(audit);
+  if (!items.length) {
+    return [{ tag: "Headings", text: auditPassed(audit) ? "Heading order passed Lighthouse checks." : "No detailed heading rows were returned.", valid: auditPassed(audit) }];
+  }
+
+  return items.slice(0, 10).map((item, index) => ({
+    tag: item.node?.nodeLabel?.match(/^h[1-6]/i)?.[0]?.toUpperCase() || `Item ${index + 1}`,
+    text: item.node?.snippet || item.node?.nodeLabel || "Heading issue detected",
+    valid: false
+  }));
+}
+
+function buildImageData(audit, totalImageCount) {
+  const failedImages = getAuditItems(audit);
+  if (!failedImages.length) {
+    return Array.from({ length: Math.min(totalImageCount, 1) }, (_, index) => ({
+      src: index === 0 ? "Lighthouse image audit" : `Image ${index + 1}`,
+      alt: "Passed",
+      sizeKb: 0,
+      lazy: true
+    }));
+  }
+
+  return failedImages.slice(0, 20).map((item, index) => ({
+    src: item.node?.snippet || item.url || `Image ${index + 1}`,
+    alt: "",
+    sizeKb: 0,
+    lazy: Boolean(item.node)
+  }));
+}
+
+function buildScriptData(networkRequests) {
+  const scripts = networkRequests
+    .filter((item) => (item.url || "").includes(".js") || item.resourceType === "Script")
+    .slice(0, 12)
+    .map((item) => ({
+      name: getUrlFileName(item.url) || "JavaScript resource",
+      type: "network",
+      blocking: Number(item.resourceSize || item.transferSize || 0) > 100000,
+      sizeKb: bytesToKb(Number(item.transferSize || item.resourceSize || 0))
+    }));
+
+  return scripts.length ? scripts : [{ name: "No script resources exposed", type: "Lighthouse", blocking: false, sizeKb: 0 }];
+}
+
+function getUrlFileName(url) {
+  try {
+    const pathname = new URL(url).pathname;
+    return pathname.split("/").filter(Boolean).pop() || url;
+  } catch {
+    return url || "";
+  }
+}
+
+function buildDomSummary(lighthouse, audits) {
+  return [
+    `<html lang="${lighthouse.configSettings?.locale || "en"}">`,
+    `  <url>${lighthouse.finalDisplayedUrl || lighthouse.finalUrl || "Analyzed URL"}</url>`,
+    `  <form-factor>${lighthouse.configSettings?.formFactor || "mobile"}</form-factor>`,
+    `  <nodes>${Math.round(getNumericAuditValue(audits["dom-size"], 0))}</nodes>`,
+    `  <fetch-time>${lighthouse.fetchTime || "Unknown"}</fetch-time>`
+  ];
 }
 
 function getAverageScore(scores) {
@@ -283,7 +410,7 @@ function renderStats(analysis) {
     ["layers", "DOM nodes", analysis.stats.totalElements, `Depth ${analysis.stats.domDepth}`],
     ["image", "Images", analysis.stats.images, `${analysis.images.filter((image) => !image.alt).length} missing alt`],
     ["code", "Scripts", analysis.stats.scripts, `${analysis.performance.requestCount} requests`],
-    ["link", "Links", analysis.stats.links, `${analysis.links.filter((link) => link.external).length} external`]
+    ["link", "Links", analysis.stats.links, analysis.stats.links ? `${analysis.links.filter((link) => link.external).length} external` : "Not exposed by API"]
   ];
 
   elements.statsGrid.innerHTML = cards.map(([iconName, label, value, subtitle]) => `
@@ -522,10 +649,9 @@ function renderDom(analysis) {
     )
   ).join("");
 
-  const textlessLinks = randomInt(0, 3);
   elements.domLinkSummary.innerHTML = [
-    ["link", "External links", `${analysis.links.filter((link) => link.external).length} outbound destinations detected.`],
-    ["alert", "Textless links", textlessLinks ? `${textlessLinks} links should get clearer visible labels.` : "Visible link labels look healthy."],
+    ["link", "External links", analysis.links.length ? `${analysis.links.filter((link) => link.external).length} outbound destinations detected.` : "PageSpeed Insights does not return a full link inventory."],
+    ["alert", "Anchor audit", auditPassed(analysis.rawPageSpeedResult?.lighthouseResult?.audits?.["crawlable-anchors"]) ? "Crawlable anchor checks passed." : "Review crawlable anchor recommendations in the SEO section."],
     ["layers", "DOM depth", `Tree reaches ${analysis.stats.domDepth} levels at its deepest point.`]
   ].map(([iconName, title, meta]) => createStackItem(iconName, title, meta)).join("");
 }
@@ -545,6 +671,12 @@ function getFilteredIssues() {
 
 function renderIssues() {
   const issues = getFilteredIssues();
+  if (!issues.length) {
+    elements.issuesList.innerHTML = `<div class="empty-copy">No issues returned for this filter.</div>`;
+    elements.inspectorBody.innerHTML = `<div class="empty-copy">Select another filter or review the overview for passing audits.</div>`;
+    return;
+  }
+
   elements.issuesList.innerHTML = issues.map((issue) => `
     <button class="issue-card" type="button" data-issue-id="${issue.id}">
       <div class="issue-topline">
@@ -647,17 +779,35 @@ async function runAnalysis() {
   setButtonContent(elements.analyzeBtn, "spark", "Analyzing...");
   setStatus("Running analysis", url, true);
 
-  await new Promise((resolve) => setTimeout(resolve, randomInt(900, 1500)));
-
-  const analysis = createAnalysis(url);
-  state.recent = [{ url: analysis.url, domain: analysis.domain }, ...state.recent.filter((item) => item.url !== analysis.url)].slice(0, 5);
-  renderRecent();
-  renderAnalysis(analysis);
-
-  elements.analyzeBtn.disabled = false;
-  setButtonContent(elements.analyzeBtn, "spark", "Analyze");
-  setStatus("Analysis complete", url, false);
-  showToast("Analysis complete", `${analysis.issues.length} issues found for ${analysis.domain}.`);
+  try {
+    const analysis = await fetchPageSpeedAnalysis(url);
+    state.recent = [{ url: analysis.url, domain: analysis.domain }, ...state.recent.filter((item) => item.url !== analysis.url)].slice(0, 5);
+    renderRecent();
+    renderAnalysis(analysis);
+    setStatus("Analysis complete", url, false);
+    showToast("Analysis complete", `${analysis.issues.length} Lighthouse issues found for ${analysis.domain}.`);
+  } catch (error) {
+    if (isQuotaError(error) && requestPageSpeedApiKey()) {
+      try {
+        const analysis = await fetchPageSpeedAnalysis(url);
+        state.recent = [{ url: analysis.url, domain: analysis.domain }, ...state.recent.filter((item) => item.url !== analysis.url)].slice(0, 5);
+        renderRecent();
+        renderAnalysis(analysis);
+        setStatus("Analysis complete", url, false);
+        showToast("Analysis complete", `${analysis.issues.length} Lighthouse issues found for ${analysis.domain}.`);
+        return;
+      } catch (retryError) {
+        setStatus("Analysis failed", url, false);
+        showToast("Analysis failed", retryError.message);
+        return;
+      }
+    }
+    setStatus("Analysis failed", url, false);
+    showToast("Analysis failed", error.message);
+  } finally {
+    elements.analyzeBtn.disabled = false;
+    setButtonContent(elements.analyzeBtn, "spark", "Analyze");
+  }
 }
 
 function downloadFile(filename, content, type) {
@@ -724,8 +874,91 @@ function toggleTheme() {
   showToast("Theme updated", state.theme === "light" ? "Light mode enabled." : "Dark mode enabled.");
 }
 
+function getCommands() {
+  const sectionCommands = [
+    ["layout", "Go to Overview", "Open the score summary and recommendations.", "1", () => switchSection("overview")],
+    ["code", "Go to DOM Inspector", "Open DOM and script diagnostics.", "2", () => switchSection("dom")],
+    ["spark", "Go to Performance", "Open Core Web Vitals and opportunities.", "3", () => switchSection("performance")],
+    ["accessibility", "Go to Accessibility", "Open heading and image checks.", "4", () => switchSection("accessibility")],
+    ["search", "Go to SEO", "Open metadata and search checks.", "5", () => switchSection("seo")],
+    ["alert", "Go to Issues", "Open filtered Lighthouse findings.", "6", () => switchSection("issues")]
+  ];
+
+  return [
+    ["spark", "Analyze URL", "Run PageSpeed analysis for the current input.", "Ctrl+Enter", runAnalysis],
+    ["search", "Focus URL Bar", "Jump straight to the website input.", "F", () => elements.urlInput.focus()],
+    ["moon", "Toggle Theme", "Switch between dark and light mode.", "T", toggleTheme],
+    ["download", "Export JSON", "Download the current audit as JSON.", "JSON", exportJson],
+    ["download", "Export HTML Report", "Download the current audit as HTML.", "HTML", exportHtml],
+    ...sectionCommands
+  ].map(([iconName, title, description, shortcut, action]) => ({ iconName, title, description, shortcut, action }));
+}
+
 function openCommandPalette() {
-  showToast("Command palette", "Shortcut actions are available via Ctrl+K.");
+  commandSelection = 0;
+  elements.commandInput.value = "";
+  elements.commandPalette.hidden = false;
+  document.body.classList.add("command-open");
+  setSidebarOpen(false);
+  renderCommandList();
+  setTimeout(() => elements.commandInput.focus(), 0);
+}
+
+function closeCommandPalette() {
+  elements.commandPalette.hidden = true;
+  document.body.classList.remove("command-open");
+}
+
+function getFilteredCommands() {
+  const query = elements.commandInput.value.trim().toLowerCase();
+  const commands = getCommands();
+  if (!query) return commands;
+  return commands.filter((command) => {
+    return command.title.toLowerCase().includes(query) || command.description.toLowerCase().includes(query);
+  });
+}
+
+function renderCommandList() {
+  const commands = getFilteredCommands();
+  commandSelection = Math.min(commandSelection, Math.max(commands.length - 1, 0));
+
+  if (!commands.length) {
+    elements.commandList.innerHTML = `<div class="command-empty">No commands found.</div>`;
+    return;
+  }
+
+  elements.commandList.innerHTML = commands.map((command, index) => `
+    <button class="command-item ${index === commandSelection ? "active" : ""}" type="button" data-command-index="${index}" aria-selected="${index === commandSelection}">
+      <span class="stat-icon-wrap">${icon(command.iconName)}</span>
+      <span class="command-copy">
+        <span class="command-title">${command.title}</span>
+        <span class="command-desc">${command.description}</span>
+      </span>
+      <span class="command-meta">
+        <span class="shortcut-chip">${command.shortcut}</span>
+        <span class="shortcut-chip">Enter</span>
+      </span>
+    </button>
+  `).join("");
+}
+
+function runSelectedCommand(index = commandSelection) {
+  const commands = getFilteredCommands();
+  const command = commands[index];
+  if (!command) return;
+  closeCommandPalette();
+  command.action();
+}
+
+function setSidebarOpen(isOpen) {
+  document.body.classList.toggle("sidebar-open", isOpen);
+  elements.sidebarToggleBtn.setAttribute("aria-expanded", String(isOpen));
+  elements.sidebarToggleBtn.setAttribute("aria-label", isOpen ? "Close analysis navigation" : "Open analysis navigation");
+  elements.sidebarBackdrop.hidden = !isOpen;
+}
+
+function toggleSidebar() {
+  setSidebarOpen(!document.body.classList.contains("sidebar-open"));
 }
 
 function handleDocumentClick(event) {
@@ -738,7 +971,13 @@ function handleDocumentClick(event) {
   const recentButton = event.target.closest("[data-recent-url]");
   if (recentButton) {
     elements.urlInput.value = recentButton.dataset.recentUrl.replace(/^https?:\/\//i, "");
+    setSidebarOpen(false);
     runAnalysis();
+  }
+
+  const commandButton = event.target.closest("[data-command-index]");
+  if (commandButton) {
+    runSelectedCommand(Number(commandButton.dataset.commandIndex));
   }
 }
 
@@ -753,7 +992,10 @@ function updateMobileHeaderState() {
 }
 
 document.querySelectorAll(".nav-link[data-section]").forEach((button) => {
-  button.addEventListener("click", () => switchSection(button.dataset.section));
+  button.addEventListener("click", () => {
+    switchSection(button.dataset.section);
+    setSidebarOpen(false);
+  });
 });
 
 document.querySelectorAll(".filter-chip").forEach((button) => {
@@ -765,8 +1007,39 @@ document.querySelectorAll(".filter-chip").forEach((button) => {
 });
 
 elements.analyzeBtn.addEventListener("click", runAnalysis);
+elements.sidebarToggleBtn.addEventListener("click", toggleSidebar);
+elements.sidebarBackdrop.addEventListener("click", () => setSidebarOpen(false));
 elements.cmdBtn.addEventListener("click", openCommandPalette);
 elements.sidebarCmdBtn.addEventListener("click", openCommandPalette);
+elements.closeCommandBtn.addEventListener("click", closeCommandPalette);
+elements.commandPalette.addEventListener("click", (event) => {
+  if (event.target === elements.commandPalette) closeCommandPalette();
+});
+elements.commandInput.addEventListener("input", () => {
+  commandSelection = 0;
+  renderCommandList();
+});
+elements.commandInput.addEventListener("keydown", (event) => {
+  const commands = getFilteredCommands();
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    commandSelection = Math.min(commandSelection + 1, Math.max(commands.length - 1, 0));
+    renderCommandList();
+  }
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    commandSelection = Math.max(commandSelection - 1, 0);
+    renderCommandList();
+  }
+  if (event.key === "Enter") {
+    event.preventDefault();
+    runSelectedCommand();
+  }
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeCommandPalette();
+  }
+});
 elements.themeBtn.addEventListener("click", toggleTheme);
 elements.exportJsonBtn.addEventListener("click", exportJson);
 elements.exportHtmlBtn.addEventListener("click", exportHtml);
@@ -776,6 +1049,12 @@ elements.urlInput.addEventListener("keydown", (event) => {
 
 document.addEventListener("click", handleDocumentClick);
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeCommandPalette();
+    setSidebarOpen(false);
+    return;
+  }
+
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
     openCommandPalette();
