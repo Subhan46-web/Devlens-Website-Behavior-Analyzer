@@ -63,6 +63,7 @@ const elements = {
 };
 
 const PAGE_SPEED_API_KEY_STORAGE = "devlensPageSpeedApiKey";
+const THEME_STORAGE = "devlensTheme";
 let commandSelection = 0;
 
 function normalizeUrl(value) {
@@ -428,6 +429,7 @@ function renderStats(analysis) {
 function renderScores(analysis) {
   state.scoreCharts.forEach((chart) => chart.destroy());
   state.scoreCharts = [];
+  const chartTheme = getChartTheme();
 
   const scoreEntries = [
     ["performance", "Performance", "gauge"],
@@ -454,7 +456,7 @@ function renderScores(analysis) {
       data: {
         datasets: [{
           data: [score, 100 - score],
-          backgroundColor: [getChartColor(score), "rgba(255,255,255,0.08)"],
+          backgroundColor: [getChartColor(score), chartTheme.track],
           borderWidth: 0
         }]
       },
@@ -505,9 +507,19 @@ function getChartColor(score) {
   return "#ff7a7a";
 }
 
+function getChartTheme() {
+  const isLightTheme = document.body.classList.contains("light-theme");
+  return {
+    label: isLightTheme ? "#576884" : "#99aeca",
+    grid: isLightTheme ? "rgba(73, 95, 130, 0.12)" : "rgba(255,255,255,0.08)",
+    track: isLightTheme ? "rgba(24, 35, 53, 0.1)" : "rgba(255,255,255,0.08)"
+  };
+}
+
 function renderOverviewCharts(analysis) {
   if (state.resourceChart) state.resourceChart.destroy();
   if (state.severityChart) state.severityChart.destroy();
+  const chartTheme = getChartTheme();
 
   state.resourceChart = new Chart(elements.resourceChartCanvas, {
     type: "bar",
@@ -529,8 +541,8 @@ function renderOverviewCharts(analysis) {
     options: {
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: "#99aeca" }, grid: { display: false } },
-        y: { ticks: { color: "#99aeca" }, grid: { color: "rgba(255,255,255,0.08)" }, beginAtZero: true }
+        x: { ticks: { color: chartTheme.label }, grid: { display: false } },
+        y: { ticks: { color: chartTheme.label }, grid: { color: chartTheme.grid }, beginAtZero: true }
       }
     }
   });
@@ -555,7 +567,7 @@ function renderOverviewCharts(analysis) {
       cutout: "68%",
       plugins: {
         legend: {
-          labels: { color: "#99aeca" }
+          labels: { color: chartTheme.label }
         }
       }
     }
@@ -870,7 +882,12 @@ function exportHtml() {
 
 function toggleTheme() {
   state.theme = state.theme === "dark" ? "light" : "dark";
+  localStorage.setItem(THEME_STORAGE, state.theme);
   document.body.classList.toggle("light-theme", state.theme === "light");
+  if (state.analysis) {
+    renderScores(state.analysis);
+    renderOverviewCharts(state.analysis);
+  }
   showToast("Theme updated", state.theme === "light" ? "Light mode enabled." : "Dark mode enabled.");
 }
 
@@ -1069,6 +1086,8 @@ document.addEventListener("keydown", (event) => {
 window.addEventListener("scroll", updateMobileHeaderState, { passive: true });
 window.addEventListener("resize", updateMobileHeaderState);
 
+state.theme = localStorage.getItem(THEME_STORAGE) === "light" ? "light" : "dark";
+document.body.classList.toggle("light-theme", state.theme === "light");
 setStatus("Ready");
 setButtonContent(elements.analyzeBtn, "spark", "Analyze");
 setIconButton(elements.themeBtn, "moon");

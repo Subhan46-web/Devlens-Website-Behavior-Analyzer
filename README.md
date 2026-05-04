@@ -41,7 +41,8 @@ This project is designed as a portfolio-friendly static web app. It is especiall
 - View six main sections: Overview, DOM Inspector, Performance, Accessibility, SEO, and Issues
 - Explore Lighthouse score cards, charts, issue summaries, and detail panels
 - Export audit data as JSON or HTML
-- Switch between dark and light theme
+- Switch between complete dark and light themes, with the chosen theme saved locally
+- Use a command palette with search, quick navigation, theme toggle, analyze, and export actions
 - Use a responsive layout for desktop, tablet, and mobile screens
 
 ## Project Structure
@@ -54,6 +55,7 @@ DevLens Website Behavior Analyzer/
 |   |-- images/
 |   |   `-- Screenshots/
 |   `-- js/
+|       |-- config.local.js       # ignored local API key file
 |       |-- config.example.js
 |       `-- script.js
 |-- index.html
@@ -92,6 +94,8 @@ Some deep DOM details, such as a complete list of every link or form on the page
 - **Responsive Design** - Building layouts with Flexbox and CSS Grid
 - **Component-Style Rendering** - Organizing vanilla JavaScript into reusable render functions
 - **Data Visualization** - Displaying insights using Chart.js
+- **Theme Management** - Switching CSS variables and redrawing chart colors for dark/light mode
+- **Command Palette UI** - Searching and running quick actions with keyboard support
 - **Conditional Rendering** - Dynamically showing insights, warnings, and states
 - **State Management** - Managing app state without a JavaScript framework
 - **Accessibility Analysis** - Reading Lighthouse accessibility audits
@@ -137,7 +141,6 @@ Use `assets/js/config.example.js` as the template and place your own PageSpeed A
 ## Future Improvements
 
 - Add a backend proxy for higher API quota and private API keys
-- Add a true command palette modal
 - Save report history in local storage
 - Add desktop and mobile strategy switching
 - Support GitHub Pages deployment
